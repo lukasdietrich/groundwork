@@ -58,7 +58,7 @@ type Dialect interface {
 }
 
 // Up is a shorthand for UpContext using the background context.
-func Up(dialect Dialect, changesets []Changeset) error {
+func Up(dialect Dialect, changesets []Changeset) ([]Changeset, error) {
 	return UpContext(context.Background(), dialect, changesets)
 }
 
@@ -67,43 +67,50 @@ func Up(dialect Dialect, changesets []Changeset) error {
 // When an error occurs, the process will stop, but previously applied changesets won't be rolled
 // back.
 // When a changeset was already applied, but does not match in content, an errors is returned.
-func UpContext(ctx context.Context, dialect Dialect, changesets []Changeset) error {
+func UpContext(ctx context.Context, dialect Dialect, changesets []Changeset) ([]Changeset, error) {
 	if err := dialect.Setup(ctx); err != nil {
-		return err
+		return nil, err
 	}
 
+	var applied []Changeset
+
 	for _, changeset := range changesets {
-		if err := applyChangeset(ctx, dialect, changeset); err != nil {
-			return fmt.Errorf("changeset %q: %w", changeset.Name(), err)
+		wasApplied, err := applyChangeset(ctx, dialect, changeset)
+		if err != nil {
+			return applied, fmt.Errorf("error on changeset %q: %w", changeset.Name(), err)
+		}
+
+		if wasApplied {
+			applied = append(applied, changeset)
 		}
 	}
 
-	return nil
+	return applied, nil
 }
 
-func applyChangeset(ctx context.Context, dialect Dialect, changeset Changeset) error {
+func applyChangeset(ctx context.Context, dialect Dialect, changeset Changeset) (bool, error) {
 	queries, err := changeset.Queries()
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	hash := calculateHash(queries)
 
 	tx, err := dialect.Begin(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	defer tx.Rollback()
 
 	shouldApply, err := checkChangelog(ctx, tx, changeset, hash)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if shouldApply {
 		if err := tx.Exec(ctx, queries); err != nil {
-			return err
+			return false, err
 		}
 
 		changelog := Changelog{
@@ -113,11 +120,15 @@ func applyChangeset(ctx context.Context, dialect Dialect, changeset Changeset) e
 		}
 
 		if err := tx.Insert(ctx, changelog); err != nil {
-			return err
+			return false, err
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return false, err
+	}
+
+	return shouldApply, nil
 }
 
 func checkChangelog(ctx context.Context, tx Tx, changeset Changeset, hash string) (bool, error) {
