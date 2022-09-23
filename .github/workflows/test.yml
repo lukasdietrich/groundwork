@@ -7,7 +7,7 @@ on:
       - 'v2'
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -17,8 +17,8 @@ jobs:
         with:
           go-version: 1.19
 
-      - name: Test
+      - name: Go Test
         run: go test -v -race ./...
 
-      - name: Vet
+      - name: Go Vet
         run: go vet ./...
