@@ -1,3 +1,5 @@
+image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/badge.svg?branch=v2[]
+
 = Groundwork
 
 Groundwork is a set of very minimal libraries to get going in https://go.dev/[Go].
