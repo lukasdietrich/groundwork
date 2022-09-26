@@ -8,12 +8,16 @@ import (
 // Struct must be a struct.
 type Struct any
 
+// Iterator is a typed wrapper for *sql.Rows, which scans rows into T.
 type Iterator[T Struct] interface {
 	// Next proceeds with the next row.
 	// Next must be called before the first row can be scanned.
 	Next() bool
+	// Err returns the latest iteration error andshould be checked whenever Next returns false.
 	Err() error
+	// Value scans the current row into a new T.
 	Value() (T, error)
+	// Close closes the underlying *sql.Rows.
 	Close() error
 }
 
@@ -42,44 +46,6 @@ func Exec(ctx context.Context, query string, args ArgumentSource) (sql.Result, e
 // Iterate executed a query and returns an iterator of the rows.
 // Iterate expects a Querier to be present in the context (see WithQuerier).
 func Iterate[T Struct](ctx context.Context, query string, args ArgumentSource) (Iterator[T], error) {
-	scanner, err := queryScanner[T](ctx, query, args)
-	if err != nil {
-		return nil, err
-	}
-
-	iterator := newIterator[T](scanner)
-	return iterator, nil
-}
-
-// Query executed a query and returns a slice of T.
-// Query expects a Querier to be present in the context (see WithQuerier).
-func Query[T Struct](ctx context.Context, query string, args ArgumentSource) ([]T, error) {
-	scanner, err := queryScanner[T](ctx, query, args)
-	if err != nil {
-		return nil, err
-	}
-
-	defer scanner.close()
-
-	var valueSlice []T
-
-	for scanner.next() {
-		var value T
-		if err := scanner.scan(&value); err != nil {
-			return nil, err
-		}
-
-		valueSlice = append(valueSlice, value)
-	}
-
-	if err := scanner.err(); err != nil {
-		return nil, err
-	}
-
-	return valueSlice, nil
-}
-
-func queryScanner[T Struct](ctx context.Context, query string, args ArgumentSource) (*scanner, error) {
 	querier, dialect, err := getQuerier(ctx)
 	if err != nil {
 		return nil, err
@@ -101,5 +67,34 @@ func queryScanner[T Struct](ctx context.Context, query string, args ArgumentSour
 		return nil, err
 	}
 
-	return scanner, nil
+	iterator := newIterator[T](scanner)
+	return iterator, nil
+}
+
+// Query executed a query and returns a slice of T.
+// Query expects a Querier to be present in the context (see WithQuerier).
+func Query[T Struct](ctx context.Context, query string, args ArgumentSource) ([]T, error) {
+	iter, err := Iterate[T](ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+
+	defer iter.Close()
+
+	var valueSlice []T
+
+	for iter.Next() {
+		value, err := iter.Value()
+		if err != nil {
+			return nil, err
+		}
+
+		valueSlice = append(valueSlice, value)
+	}
+
+	if err := iter.Err(); err != nil {
+		return nil, err
+	}
+
+	return valueSlice, nil
 }

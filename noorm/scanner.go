@@ -31,17 +31,9 @@ func newScanner[T Struct](rows *sql.Rows) (*scanner, error) {
 	return &s, nil
 }
 
-func (s scanner) close() error {
-	return s.rows.Close()
-}
-
-func (s scanner) next() bool {
-	return s.rows.Next()
-}
-
-func (s scanner) err() error {
-	return s.rows.Err()
-}
+func (s scanner) close() error { return s.rows.Close() }
+func (s scanner) next() bool   { return s.rows.Next() }
+func (s scanner) err() error   { return s.rows.Err() }
 
 func (s scanner) scan(target any) error {
 	value := reflect.Indirect(reflect.ValueOf(target))
