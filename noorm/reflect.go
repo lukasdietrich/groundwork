@@ -1,9 +1,14 @@
 package noorm
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
+)
+
+var (
+	ErrInvalidTargetType = errors.New("noorm: invalid target type")
 )
 
 func typeOfGeneric[T any]() reflect.Type {
@@ -26,7 +31,7 @@ func analyzeStructFields(lookup fieldLookupMap, prefix []int, t reflect.Type) er
 	}
 
 	if t.Kind() != reflect.Struct {
-		return fmt.Errorf("cannot traverse %q, expected a struct", t)
+		return fmt.Errorf("%w: cannot traverse %q, expected a struct", ErrInvalidTargetType, t)
 	}
 
 	for i := t.NumField() - 1; i >= 0; i-- {
@@ -47,7 +52,7 @@ func analyzeStructFields(lookup fieldLookupMap, prefix []int, t reflect.Type) er
 			name := fieldName(field)
 
 			if _, ok := lookup[name]; ok {
-				return fmt.Errorf("duplicate struct field %q", field.Name)
+				return fmt.Errorf("%w: duplicate struct field %q", ErrInvalidTargetType, field.Name)
 			}
 
 			lookup[name] = index

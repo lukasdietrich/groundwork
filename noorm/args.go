@@ -3,11 +3,16 @@ package noorm
 import (
 	"bytes"
 	"database/sql/driver"
+	"errors"
 	"fmt"
 	"reflect"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
+)
+
+var (
+	ErrInvalidArg = errors.New("noorm: invalid arg")
 )
 
 // invalidArg is a pseudo ArgsSource implementation when a provided value is not permitted.
@@ -35,7 +40,7 @@ func None() ArgumentSource {
 }
 
 func (noneArgs) arg(name string) (any, error) {
-	return nil, fmt.Errorf("noorm: no args provided: %q", name)
+	return nil, fmt.Errorf("%w: wanted %q, but provided None", ErrInvalidArg, name)
 }
 
 type namedArgs struct {
@@ -60,7 +65,8 @@ func Named[T Struct](args T) ArgumentSource {
 func (a *namedArgs) arg(name string) (any, error) {
 	index, ok := a.lookupMap[name]
 	if !ok {
-		return nil, fmt.Errorf("noorm: named argument is not in struct: %q", name)
+		return nil, fmt.Errorf("%w: wanted %q, but is not in %q",
+			ErrInvalidArg, name, a.value.Type())
 	}
 
 	return reflect.Indirect(a.value).FieldByIndex(index).Interface(), nil
@@ -77,11 +83,12 @@ func Positional(args ...any) ArgumentSource {
 func (a positionalArgs) arg(name string) (any, error) {
 	i, err := strconv.Atoi(name)
 	if err != nil {
-		return nil, fmt.Errorf("noorm: positional argument is not a number: %q", name)
+		return nil, fmt.Errorf("%w: wanted %q, but is not a number", ErrInvalidArg, name)
 	}
 
 	if i < 0 || i >= len(a) {
-		return nil, fmt.Errorf("noorm: positional argument is out of range: 0 <= %s < %d", name, len(a))
+		return nil, fmt.Errorf("%w: wanted %q, but is out of range [0,%d)",
+			ErrInvalidArg, name, len(a))
 	}
 
 	return a[i], nil
