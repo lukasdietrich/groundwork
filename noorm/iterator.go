@@ -1,27 +1,50 @@
 package noorm
 
-type iterator[T any] struct {
-	s *scanner
+import (
+	"database/sql"
+	"reflect"
+)
+
+type iterator[T Struct] struct {
+	*sql.Rows
+	columnNames []string
+	columnIndex fieldLookupMap
 }
 
-func newIterator[T any](s *scanner) Iterator[T] {
-	return iterator[T]{s: s}
-}
+func newIterator[T Struct](rows *sql.Rows) (Iterator[T], error) {
+	columnNames, err := rows.Columns()
+	if err != nil {
+		return nil, err
+	}
 
-func (i iterator[T]) Close() error {
-	return i.s.close()
-}
+	columnIndex, err := buildFieldLookupMap[T]()
+	if err != nil {
+		return nil, err
+	}
 
-func (i iterator[T]) Next() bool {
-	return i.s.next()
-}
+	iter := iterator[T]{
+		Rows:        rows,
+		columnNames: columnNames,
+		columnIndex: columnIndex,
+	}
 
-func (i iterator[T]) Err() error {
-	return i.s.err()
+	return &iter, nil
 }
 
 func (i iterator[T]) Value() (T, error) {
 	var value T
-	err := i.s.scan(&value)
+	err := i.scanInto(&value)
 	return value, err
+}
+
+func (i iterator[T]) scanInto(target *T) error {
+	value := reflect.Indirect(reflect.ValueOf(target))
+
+	targetSlice, err := buildScanTargetSlice(i.columnIndex, i.columnNames, value)
+	if err != nil {
+		return err
+	}
+
+	return i.Scan(targetSlice...)
+
 }

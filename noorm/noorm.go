@@ -69,14 +69,13 @@ func Iterate[T Struct](ctx context.Context, query string, args ArgumentSource) (
 		return nil, err
 	}
 
-	scanner, err := newScanner[T](rows)
+	iter, err := newIterator[T](rows)
 	if err != nil {
-		rows.Close()
+		rows.Close() // close rows early, because we do not return a reference to it
 		return nil, err
 	}
 
-	iterator := newIterator[T](scanner)
-	return iterator, nil
+	return iter, nil
 }
 
 // Query executed a query and returns a slice of T.
