@@ -30,6 +30,10 @@ type ArgumentSource interface {
 // Exec executed a query without returning rows.
 // Exec expects a Querier to be present in the context (see WithQuerier).
 func Exec(ctx context.Context, query string, args ArgumentSource) (sql.Result, error) {
+	if err := checkValidArgs(args); err != nil {
+		return nil, err
+	}
+
 	querier, dialect, err := getQuerier(ctx)
 	if err != nil {
 		return nil, err
@@ -46,6 +50,10 @@ func Exec(ctx context.Context, query string, args ArgumentSource) (sql.Result, e
 // Iterate executed a query and returns an iterator of the rows.
 // Iterate expects a Querier to be present in the context (see WithQuerier).
 func Iterate[T Struct](ctx context.Context, query string, args ArgumentSource) (Iterator[T], error) {
+	if err := checkValidArgs(args); err != nil {
+		return nil, err
+	}
+
 	querier, dialect, err := getQuerier(ctx)
 	if err != nil {
 		return nil, err

@@ -19,6 +19,14 @@ func (a invalidArg) arg(string) (any, error) {
 	return nil, a.error
 }
 
+func checkValidArgs(args ArgumentSource) error {
+	if invalid, ok := args.(invalidArg); ok {
+		return invalid.error
+	}
+
+	return nil
+}
+
 type noneArgs struct{}
 
 // None is used when you do not need to provide any arguments for a query.
