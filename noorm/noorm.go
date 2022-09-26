@@ -22,7 +22,7 @@ type Iterator[T Struct] interface {
 }
 
 // ArgumentSource captures the provided named or positional arguments as a single type.
-// See `Named` and `Positional` for implementations.
+// See `Named`, `Positional` and `None` for implementations.
 type ArgumentSource interface {
 	arg(name string) (any, error)
 }
