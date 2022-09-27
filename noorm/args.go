@@ -112,7 +112,7 @@ func (n nullableValue) Value() (driver.Value, error) {
 // placeholder. Named parameters have the form `@name` where `name` is the actual name.
 // A literal `@` can be written by doubling it `@@`. Only letters, numbers, dashes and underscores
 // are permitted as names.
-func rebindQuery(query, placeholder string, args ArgumentSource) (string, []any, error) {
+func rebindQuery(query string, dialect Dialect, args ArgumentSource) (string, []any, error) {
 	const at = '@'
 
 	var (
@@ -162,8 +162,9 @@ func rebindQuery(query, placeholder string, args ArgumentSource) (string, []any,
 			}
 
 			argValues := splitArg(arg)
+			repeatPlaceholder(&queryBuffer, dialect, len(parameterSlice), len(argValues))
+
 			parameterSlice = append(parameterSlice, argValues...)
-			repeatPlaceholder(&queryBuffer, placeholder, len(argValues))
 		}
 
 		if !inParam {
@@ -178,13 +179,13 @@ func isParameterNameRune(r rune) bool {
 	return unicode.IsDigit(r) || unicode.IsLetter(r) || r == '-' || r == '_'
 }
 
-func repeatPlaceholder(buffer *bytes.Buffer, placeholder string, n int) {
+func repeatPlaceholder(buffer *bytes.Buffer, dialect Dialect, position, n int) {
 	for i := 0; i < n; i++ {
 		if i > 0 {
 			buffer.WriteString(", ")
 		}
 
-		buffer.WriteString(placeholder)
+		buffer.WriteString(dialect.Placeholder(position + i))
 	}
 }
 

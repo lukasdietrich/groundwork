@@ -1,3 +1,5 @@
+//go:build integration && postgres
+
 package noorm
 
 import (
@@ -5,42 +7,31 @@ import (
 	"database/sql"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
 )
 
-type testStructUser struct {
-	ID   int    `db:"id"`
-	Name string `db:"name"`
-}
-
-type testStructPost struct {
-	ID     int    `db:"id"`
-	UserID int    `db:"user_id"`
-	Text   string `db:"text"`
-}
-
-type SqliteTestSuite struct {
+type PostgresTestSuite struct {
 	suite.Suite
 
 	db  *sql.DB
 	ctx context.Context
 }
 
-func TestSqliteTestSuite(t *testing.T) {
-	suite.Run(t, new(SqliteTestSuite))
+func TestPostgresTestSuite(t *testing.T) {
+	suite.Run(t, new(PostgresTestSuite))
 }
 
-func (s *SqliteTestSuite) SetupTest() {
-	db, err := sql.Open("sqlite3", ":memory:")
+func (s *PostgresTestSuite) SetupTest() {
+	db, err := sql.Open("postgres", "user=noorm dbname=noorm password=noorm sslmode=disable")
 	s.Require().NoError(err)
 
 	_, err = db.Exec(`
 		drop table if exists "users" ;
 
 		create table "users" (
-			"id"   integer primary key ,
-			"name" varchar not null
+			"id"   serial primary key ,
+			"name" varchar ( 64 ) not null
 		) ;
 
 		insert into "users"
@@ -60,13 +51,13 @@ func (s *SqliteTestSuite) SetupTest() {
 	s.ctx = ctx
 }
 
-func (s *SqliteTestSuite) AfterTest() {
+func (s *PostgresTestSuite) AfterTest(_, _ string) {
 	if s.db != nil {
 		s.db.Close()
 	}
 }
 
-func (s *SqliteTestSuite) TestExec_Named() {
+func (s *PostgresTestSuite) TestExec_Named() {
 	_, err := Exec(s.ctx,
 		`
 			insert into "users" ( "name" ) values ( @name ) ;
@@ -77,7 +68,7 @@ func (s *SqliteTestSuite) TestExec_Named() {
 	s.Require().NoError(err)
 }
 
-func (s *SqliteTestSuite) TestExec_NamedPointer() {
+func (s *PostgresTestSuite) TestExec_NamedPointer() {
 	_, err := Exec(s.ctx,
 		`
 			insert into "users" ( "name" ) values ( @name ) ;
@@ -88,7 +79,7 @@ func (s *SqliteTestSuite) TestExec_NamedPointer() {
 	s.Require().NoError(err)
 }
 
-func (s *SqliteTestSuite) TestExec_Positional() {
+func (s *PostgresTestSuite) TestExec_Positional() {
 	_, err := Exec(s.ctx,
 		`
 			insert into "users" ( "name" ) values ( @0 ) ;
@@ -97,7 +88,7 @@ func (s *SqliteTestSuite) TestExec_Positional() {
 	s.Require().NoError(err)
 }
 
-func (s *SqliteTestSuite) TestQuery() {
+func (s *PostgresTestSuite) TestQuery() {
 	users, err := Query[testStructUser](s.ctx,
 		`
 			select *
@@ -111,7 +102,7 @@ func (s *SqliteTestSuite) TestQuery() {
 	s.Equal([]testStructUser{{ID: 1, Name: "Foo"}, {ID: 3, Name: "Baz"}}, users)
 }
 
-func (s *SqliteTestSuite) TestIterate() {
+func (s *PostgresTestSuite) TestIterate() {
 	iterator, err := Iterate[testStructUser](s.ctx,
 		`
 			select *

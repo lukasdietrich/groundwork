@@ -34,12 +34,12 @@ func Exec(ctx context.Context, query string, args ArgumentSource) (sql.Result, e
 		return nil, err
 	}
 
-	querier, dialect, err := getQuerier(ctx)
+	querier, dialect, err := getQuerierAndDialect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rebound, params, err := rebindQuery(query, dialect.Placeholder(), args)
+	rebound, params, err := rebindQuery(query, dialect, args)
 	if err != nil {
 		return nil, err
 	}
@@ -54,12 +54,12 @@ func Iterate[T Struct](ctx context.Context, query string, args ArgumentSource) (
 		return nil, err
 	}
 
-	querier, dialect, err := getQuerier(ctx)
+	querier, dialect, err := getQuerierAndDialect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rebound, params, err := rebindQuery(query, dialect.Placeholder(), args)
+	rebound, params, err := rebindQuery(query, dialect, args)
 	if err != nil {
 		return nil, err
 	}

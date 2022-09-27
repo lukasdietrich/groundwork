@@ -1,35 +1,65 @@
 package noorm
 
+import (
+	"database/sql"
+	"reflect"
+	"strconv"
+	"strings"
+)
+
 type Dialect interface {
-	Placeholder() string
+	Placeholder(position int) string
+	QuoteIdentifier(identifier string) string
+}
+
+func guessDialect(db *sql.DB) Dialect {
+	driver := db.Driver()
+	driverType := reflect.TypeOf(driver)
+	if driverType.Kind() == reflect.Pointer {
+		driverType = driverType.Elem()
+	}
+
+	switch driverType.PkgPath() {
+	case "github.com/mattn/go-sqlite3":
+		return sqliteDialect{}
+
+	case "github.com/lib/pq", "github.com/jackc/pgx":
+		return postgresDialect{}
+
+	case "github.com/go-sql-driver/mysql":
+		return mysqlDialect{}
+
+	default:
+		return defaultDialect{}
+	}
 }
 
 type defaultDialect struct{}
 
-func (defaultDialect) Placeholder() string {
+func (defaultDialect) Placeholder(int) string {
 	return "?"
 }
 
-type querierWithDialect struct {
-	Querier
-	dialect Dialect
+func (defaultDialect) QuoteIdentifier(identifier string) string {
+	return `"` + strings.Replace(identifier, `"`, `""`, -1) + `"`
 }
 
-func (q querierWithDialect) Dialect() Dialect {
-	return q.dialect
+type sqliteDialect struct {
+	defaultDialect
 }
 
-func WithDialect(querier Querier, dialect Dialect) Querier {
-	return querierWithDialect{
-		Querier: querier,
-		dialect: dialect,
-	}
+type postgresDialect struct {
+	defaultDialect
 }
 
-func dialect(querier Querier) Dialect {
-	if qd, ok := querier.(interface{ Dialect() Dialect }); ok {
-		return qd.Dialect()
-	}
+func (postgresDialect) Placeholder(position int) string {
+	return "$" + strconv.Itoa(position+1)
+}
 
-	return defaultDialect{}
+type mysqlDialect struct {
+	defaultDialect
+}
+
+func (mysqlDialect) QuoteIdentifier(identifier string) string {
+	return "`" + strings.Replace(identifier, "`", "``", -1) + "`"
 }

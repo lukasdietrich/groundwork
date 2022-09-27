@@ -1,3 +1,5 @@
+//go:build integration && mysql
+
 package noorm
 
 import (
@@ -5,50 +7,39 @@ import (
 	"database/sql"
 	"testing"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/suite"
 )
 
-type testStructUser struct {
-	ID   int    `db:"id"`
-	Name string `db:"name"`
-}
-
-type testStructPost struct {
-	ID     int    `db:"id"`
-	UserID int    `db:"user_id"`
-	Text   string `db:"text"`
-}
-
-type SqliteTestSuite struct {
+type MysqlTestSuite struct {
 	suite.Suite
 
 	db  *sql.DB
 	ctx context.Context
 }
 
-func TestSqliteTestSuite(t *testing.T) {
-	suite.Run(t, new(SqliteTestSuite))
+func TestMysqlTestSuite(t *testing.T) {
+	suite.Run(t, new(MysqlTestSuite))
 }
 
-func (s *SqliteTestSuite) SetupTest() {
-	db, err := sql.Open("sqlite3", ":memory:")
+func (s *MysqlTestSuite) SetupTest() {
+	db, err := sql.Open("mysql", "noorm:noorm@/noorm?multiStatements=true")
 	s.Require().NoError(err)
 
 	_, err = db.Exec(`
-		drop table if exists "users" ;
+		drop table if exists users ;
 
-		create table "users" (
-			"id"   integer primary key ,
-			"name" varchar not null
+		create table users (
+			id   integer primary key auto_increment ,
+			name varchar ( 64 ) not null
 		) ;
 
-		insert into "users"
-			( "name" )
+		insert into users
+			( id, name )
 		values
-			( 'Foo' ),
-			( 'Bar' ),
-			( 'Baz' )
+			( null, "Foo" ),
+			( null, "Bar" ),
+			( null, "Baz" )
 		;
 	`)
 	s.Require().NoError(err)
@@ -60,16 +51,16 @@ func (s *SqliteTestSuite) SetupTest() {
 	s.ctx = ctx
 }
 
-func (s *SqliteTestSuite) AfterTest() {
+func (s *MysqlTestSuite) AfterTest(_, _ string) {
 	if s.db != nil {
 		s.db.Close()
 	}
 }
 
-func (s *SqliteTestSuite) TestExec_Named() {
+func (s *MysqlTestSuite) TestExec_Named() {
 	_, err := Exec(s.ctx,
 		`
-			insert into "users" ( "name" ) values ( @name ) ;
+			insert into users ( name ) values ( @name ) ;
 		`,
 		Named(testStructUser{
 			Name: "Tom",
@@ -77,10 +68,10 @@ func (s *SqliteTestSuite) TestExec_Named() {
 	s.Require().NoError(err)
 }
 
-func (s *SqliteTestSuite) TestExec_NamedPointer() {
+func (s *MysqlTestSuite) TestExec_NamedPointer() {
 	_, err := Exec(s.ctx,
 		`
-			insert into "users" ( "name" ) values ( @name ) ;
+			insert into users ( name ) values ( @name ) ;
 		`,
 		Named(&testStructUser{
 			Name: "Jerry",
@@ -88,22 +79,22 @@ func (s *SqliteTestSuite) TestExec_NamedPointer() {
 	s.Require().NoError(err)
 }
 
-func (s *SqliteTestSuite) TestExec_Positional() {
+func (s *MysqlTestSuite) TestExec_Positional() {
 	_, err := Exec(s.ctx,
 		`
-			insert into "users" ( "name" ) values ( @0 ) ;
+			insert into users ( name ) values ( @0 ) ;
 		`,
 		Positional("Tom"))
 	s.Require().NoError(err)
 }
 
-func (s *SqliteTestSuite) TestQuery() {
+func (s *MysqlTestSuite) TestQuery() {
 	users, err := Query[testStructUser](s.ctx,
 		`
 			select *
-			from "users"
-			where "name" in (@0) 
-			order by "id" asc ;
+			from users
+			where name in (@0) 
+			order by id asc ;
 		`,
 		Positional([]string{"Foo", "Baz"}))
 
@@ -111,13 +102,13 @@ func (s *SqliteTestSuite) TestQuery() {
 	s.Equal([]testStructUser{{ID: 1, Name: "Foo"}, {ID: 3, Name: "Baz"}}, users)
 }
 
-func (s *SqliteTestSuite) TestIterate() {
+func (s *MysqlTestSuite) TestIterate() {
 	iterator, err := Iterate[testStructUser](s.ctx,
 		`
 			select *
-			from "users"
-			where "name" in (@0) 
-			order by "id" asc ;
+			from users
+			where name in (@0) 
+			order by id asc ;
 		`,
 		Positional([]string{"Foo", "Baz"}))
 

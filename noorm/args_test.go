@@ -70,9 +70,8 @@ func TestRebind(t *testing.T) {
 	}
 
 	type input struct {
-		query       string
-		placeholder string
-		args        ArgumentSource
+		query string
+		args  ArgumentSource
 	}
 
 	for _, tc := range []struct {
@@ -81,9 +80,8 @@ func TestRebind(t *testing.T) {
 	}{
 		{
 			input{
-				query:       `select * from t where a = @0 and b in (@1) ;`,
-				placeholder: "?",
-				args:        Positional(1, []int{1, 2, 3}),
+				query: `select * from t where a = @0 and b in (@1) ;`,
+				args:  Positional(1, []int{1, 2, 3}),
 			},
 			expected{
 				query:      `select * from t where a = ? and b in (?, ?, ?) ;`,
@@ -92,8 +90,7 @@ func TestRebind(t *testing.T) {
 		},
 		{
 			input{
-				query:       `select * from t where a = @param_a and b in (@ParamB) ;`,
-				placeholder: "?",
+				query: `select * from t where a = @param_a and b in (@ParamB) ;`,
 				args: Named(struct {
 					ParamA string `db:"param_a"`
 					ParamB []int
@@ -109,9 +106,8 @@ func TestRebind(t *testing.T) {
 		},
 		{
 			input{
-				query:       `select * from t where a = @0 and b like @1`,
-				placeholder: "?",
-				args:        Positional(1, 2),
+				query: `select * from t where a = @0 and b like @1`,
+				args:  Positional(1, 2),
 			},
 			expected{
 				query:      `select * from t where a = ? and b like ?`,
@@ -120,9 +116,8 @@ func TestRebind(t *testing.T) {
 		},
 		{
 			input{
-				query:       `select * from t where a = @2 and b = @0`,
-				placeholder: "?",
-				args:        Positional(1, 2, 3, 4),
+				query: `select * from t where a = @2 and b = @0`,
+				args:  Positional(1, 2, 3, 4),
 			},
 			expected{
 				query:      `select * from t where a = ? and b = ?`,
@@ -131,9 +126,8 @@ func TestRebind(t *testing.T) {
 		},
 		{
 			input{
-				query:       `select * from t where a = '@@' and b = '@ hello' ;`,
-				placeholder: "?",
-				args:        Positional(1, 2, 3, 4),
+				query: `select * from t where a = '@@' and b = '@ hello' ;`,
+				args:  Positional(1, 2, 3, 4),
 			},
 			expected{
 				query:      `select * from t where a = '@' and b = '@ hello' ;`,
@@ -141,7 +135,7 @@ func TestRebind(t *testing.T) {
 			},
 		},
 	} {
-		query, args, err := rebindQuery(tc.input.query, tc.input.placeholder, tc.input.args)
+		query, args, err := rebindQuery(tc.input.query, defaultDialect{}, tc.input.args)
 
 		require.NoError(t, err)
 		assert.Equal(t, tc.expected.query, query)
