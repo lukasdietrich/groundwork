@@ -110,6 +110,19 @@ func (s *SqliteTestSuite) TestQuery() {
 	s.Equal([]testStructUser{{ID: 1, Name: "Foo"}, {ID: 3, Name: "Baz"}}, users)
 }
 
+func (s *SqliteTestSuite) TestQueryFirst() {
+	user, err := QueryFirst[testStructUser](s.ctx,
+		`
+			select *
+			from "users"
+			where "name" = @name
+		`,
+		Named(testStructUser{Name: "Baz"}))
+
+	s.Require().NoError(err)
+	s.Equal(&testStructUser{ID: 3, Name: "Baz"}, user)
+}
+
 func (s *SqliteTestSuite) TestIterate() {
 	iterator, err := Iterate[testStructUser](s.ctx,
 		`

@@ -105,3 +105,31 @@ func Query[T Struct](ctx context.Context, query string, args ArgumentSource) ([]
 
 	return valueSlice, nil
 }
+
+// QueryFirst executed a query and returns the first result.
+// If the query yields no rows, sql.ErrNoRows is returned.
+// If the query yields more than one row, the remaining rows are discarded.
+// QueryFirst expects a Querier to be present in the context (see WithDatabase).
+func QueryFirst[T Struct](ctx context.Context, query string, args ArgumentSource) (*T, error) {
+	iter, err := Iterate[T](ctx, query, args)
+	if err != nil {
+		return nil, err
+	}
+
+	defer iter.Close()
+
+	if !iter.Next() {
+		if err := iter.Err(); err != nil {
+			return nil, err
+		}
+
+		return nil, sql.ErrNoRows
+	}
+
+	value, err := iter.Value()
+	if err != nil {
+		return nil, err
+	}
+
+	return &value, nil
+}
