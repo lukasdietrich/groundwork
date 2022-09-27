@@ -4,7 +4,6 @@ package noorm
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	_ "github.com/lib/pq"
@@ -14,7 +13,7 @@ import (
 type PostgresTestSuite struct {
 	suite.Suite
 
-	db  *sql.DB
+	db  *Database
 	ctx context.Context
 }
 
@@ -23,7 +22,7 @@ func TestPostgresTestSuite(t *testing.T) {
 }
 
 func (s *PostgresTestSuite) SetupTest() {
-	db, err := sql.Open("postgres", "user=noorm dbname=noorm password=noorm sslmode=disable")
+	db, err := Open("postgres", "user=noorm dbname=noorm password=noorm sslmode=disable")
 	s.Require().NoError(err)
 
 	_, err = db.Exec(`

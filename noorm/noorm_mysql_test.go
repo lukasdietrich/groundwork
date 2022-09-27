@@ -4,7 +4,6 @@ package noorm
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -14,7 +13,7 @@ import (
 type MysqlTestSuite struct {
 	suite.Suite
 
-	db  *sql.DB
+	db  *Database
 	ctx context.Context
 }
 
@@ -23,7 +22,7 @@ func TestMysqlTestSuite(t *testing.T) {
 }
 
 func (s *MysqlTestSuite) SetupTest() {
-	db, err := sql.Open("mysql", "noorm:noorm@/noorm?multiStatements=true")
+	db, err := Open("mysql", "noorm:noorm@/noorm?multiStatements=true")
 	s.Require().NoError(err)
 
 	_, err = db.Exec(`

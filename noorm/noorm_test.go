@@ -2,7 +2,6 @@ package noorm
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -23,7 +22,7 @@ type testStructPost struct {
 type SqliteTestSuite struct {
 	suite.Suite
 
-	db  *sql.DB
+	db  *Database
 	ctx context.Context
 }
 
@@ -32,7 +31,7 @@ func TestSqliteTestSuite(t *testing.T) {
 }
 
 func (s *SqliteTestSuite) SetupTest() {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := Open("sqlite3", ":memory:")
 	s.Require().NoError(err)
 
 	_, err = db.Exec(`

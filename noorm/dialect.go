@@ -1,32 +1,30 @@
 package noorm
 
 import (
-	"database/sql"
-	"reflect"
 	"strconv"
 	"strings"
 )
 
+// Dialect provides database specific sql query helpers.
 type Dialect interface {
+	// Placeholder returns a positional argument placeholder.
+	// The parameter `position` is the index of the parameter starting at 0.
 	Placeholder(position int) string
+	// QuoteIdentifier quotes an identifier (eg. column or table name).
 	QuoteIdentifier(identifier string) string
 }
 
-func guessDialect(db *sql.DB) Dialect {
-	driver := db.Driver()
-	driverType := reflect.TypeOf(driver)
-	if driverType.Kind() == reflect.Pointer {
-		driverType = driverType.Elem()
-	}
+func guessDialect(driverName string) Dialect {
+	driverName = strings.ToLower(driverName)
 
-	switch driverType.PkgPath() {
-	case "github.com/mattn/go-sqlite3":
+	switch {
+	case strings.Contains(driverName, "sqlite"):
 		return sqliteDialect{}
 
-	case "github.com/lib/pq", "github.com/jackc/pgx":
+	case strings.Contains(driverName, "postgres"):
 		return postgresDialect{}
 
-	case "github.com/go-sql-driver/mysql":
+	case strings.Contains(driverName, "mysql") || strings.Contains(driverName, "maria"):
 		return mysqlDialect{}
 
 	default:

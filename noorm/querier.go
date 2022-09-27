@@ -17,11 +17,6 @@ type (
 	ctxTransactionKey struct{}
 )
 
-type database struct {
-	*sql.DB
-	dialect Dialect
-}
-
 // Querier is an abstraction over both *sql.DB and *sql.Tx.
 type Querier interface {
 	ExecContext(context.Context, string, ...any) (sql.Result, error)
@@ -34,15 +29,40 @@ var (
 	_ Querier = &sql.Tx{}
 )
 
-func WithDatabase(ctx context.Context, db *sql.DB) context.Context {
-	return context.WithValue(ctx, ctxDatabaseKey{}, &database{
+type Database struct {
+	*sql.DB
+	dialect Dialect
+}
+
+type transaction struct {
+	*sql.Tx
+
+	// save pointer to db to avoid traversing the context twice
+	db *Database
+}
+
+func New(db *sql.DB, dialect Dialect) *Database {
+	return &Database{
 		DB:      db,
-		dialect: guessDialect(db),
-	})
+		dialect: dialect,
+	}
+}
+
+func Open(driverName, dataSourceName string) (*Database, error) {
+	db, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, err
+	}
+
+	return New(db, guessDialect(driverName)), nil
+}
+
+func WithDatabase(ctx context.Context, db *Database) context.Context {
+	return context.WithValue(ctx, ctxDatabaseKey{}, db)
 }
 
 func Begin(ctx context.Context, opts *sql.TxOptions) (context.Context, *sql.Tx, error) {
-	db, ok := ctx.Value(ctxDatabaseKey{}).(*database)
+	db, ok := ctx.Value(ctxDatabaseKey{}).(*Database)
 	if !ok {
 		return ctx, nil, fmt.Errorf("%w: cannot begin transaction", ErrNoDatabaseInContext)
 	}
@@ -52,19 +72,24 @@ func Begin(ctx context.Context, opts *sql.TxOptions) (context.Context, *sql.Tx, 
 		return ctx, nil, err
 	}
 
-	return context.WithValue(ctx, ctxTransactionKey{}, tx), tx, nil
+	ctx = context.WithValue(ctx, ctxTransactionKey{}, &transaction{
+		Tx: tx,
+		db: db,
+	})
+
+	return ctx, tx, nil
 }
 
-func getQuerierAndDialect(ctx context.Context) (Querier, Dialect, error) {
-	db, ok := ctx.Value(ctxDatabaseKey{}).(*database)
-	if !ok {
-		return nil, nil, ErrNoQuerierInContext
-	}
-
-	tx, ok := ctx.Value(ctxTransactionKey{}).(*sql.Tx)
+func QuerierFrom(ctx context.Context) (Querier, Dialect, error) {
+	tx, ok := ctx.Value(ctxTransactionKey{}).(*transaction)
 	if ok {
-		return tx, db.dialect, nil
+		return tx, tx.db.dialect, nil
 	}
 
-	return db, db.dialect, nil
+	db, ok := ctx.Value(ctxDatabaseKey{}).(*Database)
+	if ok {
+		return db, db.dialect, nil
+	}
+
+	return nil, nil, ErrNoQuerierInContext
 }
