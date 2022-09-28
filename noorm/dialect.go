@@ -15,16 +15,14 @@ type Dialect interface {
 }
 
 func guessDialect(driverName string) Dialect {
-	driverName = strings.ToLower(driverName)
-
-	switch {
-	case strings.Contains(driverName, "sqlite"):
+	switch strings.ToLower(driverName) {
+	case "sqlite3":
 		return sqliteDialect{}
 
-	case strings.Contains(driverName, "postgres"):
+	case "postgres":
 		return postgresDialect{}
 
-	case strings.Contains(driverName, "mysql") || strings.Contains(driverName, "maria"):
+	case "mysql":
 		return mysqlDialect{}
 
 	default:
