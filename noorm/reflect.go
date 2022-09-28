@@ -50,9 +50,12 @@ func analyzeStructFields(lookup fieldLookupMap, prefix []int, t reflect.Type) er
 			}
 		} else {
 			name := fieldName(field)
+			if !isValidFieldName(name) {
+				return fmt.Errorf("%w: invalid field name %q", ErrInvalidTargetType, name)
+			}
 
 			if _, ok := lookup[name]; ok {
-				return fmt.Errorf("%w: duplicate struct field %q", ErrInvalidTargetType, field.Name)
+				return fmt.Errorf("%w: duplicate struct field %q", ErrInvalidTargetType, name)
 			}
 
 			lookup[name] = index
@@ -67,6 +70,16 @@ func appendFieldIndex(prefix []int, i int) []int {
 	copy(path, prefix)
 	path[len(path)-1] = i
 	return path
+}
+
+func isValidFieldName(fieldName string) bool {
+	for _, r := range fieldName {
+		if !isParameterNameRune(r) {
+			return false
+		}
+	}
+
+	return true
 }
 
 func fieldName(field reflect.StructField) string {
