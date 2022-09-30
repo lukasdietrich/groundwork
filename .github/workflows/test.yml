@@ -1,0 +1,60 @@
+name: Tests
+
+on:
+  push:
+    branches: 
+      - 'master'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: 'postgres:14-alpine'
+
+        env:
+          POSTGRES_DB: 'noorm'
+          POSTGRES_USER: 'noorm'
+          POSTGRES_PASSWORD: 'noorm'
+
+        ports:
+          - '5432:5432'
+
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      mariadb:
+        image: 'mariadb:10'
+
+        env:
+          MARIADB_DATABASE: 'noorm'
+          MARIADB_USER: 'noorm'
+          MARIADB_PASSWORD: 'noorm'
+          MARIADB_RANDOM_ROOT_PASSWORD: 'true'
+
+        ports:
+          - '3306:3306'
+
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: Go Test
+        run: go test -v -race -cover -tags "integration postgres mysql" ./...
+
+      - name: Go Vet
+        run: go vet ./...

@@ -1,4 +1,4 @@
-package groundwork
+package migration
 
 import (
 	"io/fs"
@@ -24,8 +24,8 @@ func (c literalChangeset) Queries() (string, error) {
 }
 
 type fileChangeset struct {
-	name       string
 	filesystem fs.FS
+	name       string
 }
 
 func (c fileChangeset) Name() string {
@@ -37,7 +37,14 @@ func (c fileChangeset) Queries() (string, error) {
 	return string(queries), err
 }
 
-func FilesChangeset(filesystem fs.FS) ([]Changeset, error) {
+func FileChangeset(filesystem fs.FS, name string) Changeset {
+	return fileChangeset{
+		filesystem: filesystem,
+		name:       name,
+	}
+}
+
+func ChangesetsFromFolder(filesystem fs.FS) ([]Changeset, error) {
 	files, err := fs.ReadDir(filesystem, ".")
 	if err != nil {
 		return nil, err
@@ -47,7 +54,7 @@ func FilesChangeset(filesystem fs.FS) ([]Changeset, error) {
 
 	for _, file := range files {
 		if isSqlFile(file) {
-			changesets = append(changesets, fileChangeset{file.Name(), filesystem})
+			changesets = append(changesets, FileChangeset(filesystem, file.Name()))
 		}
 	}
 
