@@ -1,4 +1,4 @@
-package groundwork
+package migration
 
 import (
 	"context"
@@ -8,12 +8,33 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/lukasdietrich/groundwork/v2/noorm"
 )
 
 var (
 	// ErrHashMismatch is returned when a changeset was already applied, but the queries changed.
-	ErrHashMismatch = errors.New("hash mismatches already applied changelog entry")
+	ErrHashMismatch = errors.New("migration: hash does not match already applied version")
+	// ErrNameTooLong is returned when a changeset name exceeds the limit.
+	ErrNameTooLong = errors.New("migration: changeset name too long (max. 256)")
 )
+
+type Options struct {
+	// ChangelogTablename is the name of the table used to track already applied changesets.
+	ChangelogTablename string
+}
+
+func fillDefaults(opts *Options) *Options {
+	if opts == nil {
+		opts = &Options{}
+	}
+
+	if opts.ChangelogTablename == "" {
+		opts.ChangelogTablename = "database_changelog"
+	}
+
+	return opts
+}
 
 // Changeset represents a series of related queries to advance the database schema.
 type Changeset interface {
@@ -24,60 +45,38 @@ type Changeset interface {
 	Queries() (string, error)
 }
 
-// Changelog is an entity to keep track of already applied changesets.
-type Changelog struct {
-	// Name is the name of the changeset.
-	Name string
-	// Hash is the result of sha256(changeset.Queries())
-	Hash string
-	// Time is the time when a changeset was applied.
-	Time time.Time
-}
-
-// Tx is database transaction related to a specific dialect.
-type Tx interface {
-	// Commit commits the transaction.
-	Commit() error
-	// Rollback rollbacks the transaction.
-	Rollback() error
-
-	// Exec executes an sql query without arguments.
-	Exec(context.Context, string) error
-	// Lookup returns the changelog for a given changeset.
-	Lookup(context.Context, Changeset) (*Changelog, error)
-	// Insert writes a new changelog entry to the database.
-	Insert(context.Context, Changelog) error
-}
-
-// Dialect is a database agnostic adapter to apply changesets.
-type Dialect interface {
-	// Setup creates the changelog table.
-	Setup(context.Context) error
-	// Begin startes a new dialect-specific transaction.
-	Begin(context.Context) (Tx, error)
-}
-
-// Up is a shorthand for UpContext using the background context.
-func Up(dialect Dialect, changesets []Changeset) ([]Changeset, error) {
-	return UpContext(context.Background(), dialect, changesets)
-}
-
-// UpContext applies all changesets in order, if they have not already been applied.
+// Up applies all changesets in order, if they have not already been applied.
 // All changesets are applied within a transaction.
 // When an error occurs, the process will stop, but previously applied changesets won't be rolled
 // back.
 // When a changeset was already applied, but does not match in content, an errors is returned.
-func UpContext(ctx context.Context, dialect Dialect, changesets []Changeset) ([]Changeset, error) {
-	if err := dialect.Setup(ctx); err != nil {
+// Up expects a groundwork/noorm.Querier to be present in the context (see WithDatabase).
+func Up(ctx context.Context, changesets []Changeset, opts *Options) ([]Changeset, error) {
+	opts = fillDefaults(opts)
+
+	dao, err := newChangelogDao(ctx, opts.ChangelogTablename)
+	if err != nil {
 		return nil, err
 	}
 
+	if err := dao.setupTable(ctx); err != nil {
+		return nil, err
+	}
+
+	return (&migrator{dao}).up(ctx, changesets)
+}
+
+type migrator struct {
+	dao *changelogDao
+}
+
+func (m *migrator) up(ctx context.Context, changesets []Changeset) ([]Changeset, error) {
 	var applied []Changeset
 
 	for _, changeset := range changesets {
-		wasApplied, err := applyChangeset(ctx, dialect, changeset)
+		wasApplied, err := m.apply(ctx, changeset)
 		if err != nil {
-			return applied, fmt.Errorf("error on changeset %q: %w", changeset.Name(), err)
+			return applied, fmt.Errorf("%w on changeset %q", err, changeset.Name())
 		}
 
 		if wasApplied {
@@ -88,38 +87,43 @@ func UpContext(ctx context.Context, dialect Dialect, changesets []Changeset) ([]
 	return applied, nil
 }
 
-func applyChangeset(ctx context.Context, dialect Dialect, changeset Changeset) (bool, error) {
+func (m *migrator) apply(ctx context.Context, changeset Changeset) (bool, error) {
 	queries, err := changeset.Queries()
 	if err != nil {
 		return false, err
 	}
 
+	name := changeset.Name()
+	if len(name) > nameSize {
+		return false, ErrNameTooLong
+	}
+
 	hash := calculateHash(queries)
 
-	tx, err := dialect.Begin(ctx)
+	ctx, tx, err := noorm.Begin(ctx, nil)
 	if err != nil {
 		return false, err
 	}
 
 	defer tx.Rollback()
 
-	shouldApply, err := checkChangelog(ctx, tx, changeset, hash)
+	shouldApply, err := m.check(ctx, changeset, hash)
 	if err != nil {
 		return false, err
 	}
 
 	if shouldApply {
-		if err := tx.Exec(ctx, queries); err != nil {
+		if _, err := noorm.Exec(ctx, queries, noorm.None()); err != nil {
 			return false, err
 		}
 
-		changelog := Changelog{
+		entry := changelogEntry{
 			Name: changeset.Name(),
 			Hash: hash,
-			Time: time.Now(),
+			Time: time.Now().Format(timeFormat),
 		}
 
-		if err := tx.Insert(ctx, changelog); err != nil {
+		if err := m.dao.insert(ctx, &entry); err != nil {
 			return false, err
 		}
 	}
@@ -131,8 +135,8 @@ func applyChangeset(ctx context.Context, dialect Dialect, changeset Changeset) (
 	return shouldApply, nil
 }
 
-func checkChangelog(ctx context.Context, tx Tx, changeset Changeset, hash string) (bool, error) {
-	changelog, err := tx.Lookup(ctx, changeset)
+func (m *migrator) check(ctx context.Context, changeset Changeset, hash string) (bool, error) {
+	entry, err := m.dao.lookup(ctx, changeset.Name())
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return true, nil
@@ -141,11 +145,11 @@ func checkChangelog(ctx context.Context, tx Tx, changeset Changeset, hash string
 		return false, err
 	}
 
-	if changelog == nil {
+	if entry == nil {
 		return true, nil
 	}
 
-	if hash != changelog.Hash {
+	if hash != entry.Hash {
 		return false, ErrHashMismatch
 	}
 

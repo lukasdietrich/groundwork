@@ -1,4 +1,4 @@
-package groundwork
+package migration
 
 import (
 	"embed"
@@ -13,11 +13,11 @@ import (
 //go:embed testdata/*
 var testdata embed.FS
 
-func TestFilesChangeset(t *testing.T) {
+func TestFolderChangeset(t *testing.T) {
 	files, err := fs.Sub(testdata, "testdata")
 	require.NoError(t, err)
 
-	changesets, err := FilesChangeset(files)
+	changesets, err := ChangesetsFromFolder(files)
 	require.NoError(t, err)
 	assert.Len(t, changesets, 2)
 
