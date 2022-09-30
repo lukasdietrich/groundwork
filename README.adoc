@@ -1,4 +1,4 @@
-image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/badge.svg?branch=v2[]
+image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/badge.svg
 
 = Groundwork
 
