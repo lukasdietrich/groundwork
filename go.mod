@@ -1,4 +1,4 @@
-module github.com/lukasdietrich/groundwork/v2
+module github.com/lukasdietrich/groundwork
 
 go 1.19
 

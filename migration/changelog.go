@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lukasdietrich/groundwork/v2/noorm"
+	"github.com/lukasdietrich/groundwork/noorm"
 )
 
 const (

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/lukasdietrich/groundwork/v2/noorm"
+	"github.com/lukasdietrich/groundwork/noorm"
 )
 
 func TestPostgresMigration(t *testing.T) {
