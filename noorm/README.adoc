@@ -1,4 +1,0 @@
-== groundwork/__noorm__
-
-The noorm package provides convenient mapping for sql databases.
-Queries are still plain sql. Noorm is not an orm.

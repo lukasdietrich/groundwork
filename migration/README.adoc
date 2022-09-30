@@ -1,4 +1,0 @@
-== groundwork/__migration__
-
-The migration package provides simple database schema migrations.
-Migrations are defined in plain sql.
