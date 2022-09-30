@@ -1,4 +1,4 @@
-image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/badge.svg
+image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/badge.svg[]
 
 = Groundwork
 
@@ -9,9 +9,9 @@ Groundwork works (at least) with SQLite, PostgreSQL and MySQL.
 == Install
 
 [source,bash]
----
+----
 go get github.com/lukasdietrich/groundwork
----
+----
 
 == Packages
 
