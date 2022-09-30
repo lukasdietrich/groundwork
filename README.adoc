@@ -4,12 +4,5 @@ image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/bad
 
 Groundwork is a set of very minimal libraries to get going in https://go.dev/[Go].
 
-== groundwork/__migration__
-
-The migration package provides simple database schema migrations.
-Migrations are defined in plain sql.
-
-== groundwork/__noorm__
-
-The noorm package provides convenient mapping for sql databases.
-Queries are still plain sql. Noorm is not an orm.
+include::noorm/README.adoc[]
+include::migration/README.adoc[]
