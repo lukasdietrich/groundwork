@@ -1,4 +1,5 @@
-image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/badge.svg[]
+image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/badge.svg[Tests,link=https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml]
+image:https://pkg.go.dev/badge/github.com/lukasdietrich/groundwork.svg[Go Reference,link=https://pkg.go.dev/github.com/lukasdietrich/groundwork]
 
 = Groundwork
 
