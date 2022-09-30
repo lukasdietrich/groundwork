@@ -2,14 +2,25 @@ image:https://github.com/lukasdietrich/groundwork/actions/workflows/test.yml/bad
 
 = Groundwork
 
-Groundwork is a set of very minimal libraries to get going in https://go.dev/[Go].
+Groundwork is a set of very minimal database libraries to get going in https://go.dev/[Go].
 
-== groundwork/__migration__
+Groundwork works (at least) with SQLite, PostgreSQL and MySQL.
+
+== Install
+
+[source,bash]
+---
+go get github.com/lukasdietrich/groundwork
+---
+
+== Packages
+
+=== noorm
+
+The noorm package provides convenient mapping helpers for sql databases.
+Queries are still plain sql. Noorm is not an orm.
+
+=== migration
 
 The migration package provides simple database schema migrations.
 Migrations are defined in plain sql.
-
-== groundwork/__noorm__
-
-The noorm package provides convenient mapping for sql databases.
-Queries are still plain sql. Noorm is not an orm.
