@@ -19,7 +19,7 @@ func TestSqliteMigration(t *testing.T) {
 
 	changesets := []Changeset{
 		LiteralChangeset("1", `
-			create table "users" (
+			create table "fruits" (
 				"id"   integer primary key autoincrement ,
 				"name" varchar not null
 			) ;
@@ -32,12 +32,10 @@ func TestSqliteMigration(t *testing.T) {
 	assert.Equal(t, changesets, applied)
 
 	changesets = append(changesets, LiteralChangeset("2", `
-			create table "posts" (
-				"id"      integer primary key autoincrement ,
-				"user_id" integer not null ,
-				"text"    text    not null ,
-
-				foreign key ( "user_id" ) references "users" ( "id" )
+			insert into "fruits" (
+				"name"
+			) values (
+				'Orange'
 			) ;
 		`))
 

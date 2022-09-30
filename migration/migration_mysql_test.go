@@ -1,3 +1,5 @@
+//go:build integration && mysql
+
 package migration
 
 import (
@@ -18,14 +20,13 @@ func TestMysqlMigration(t *testing.T) {
 	defer db.Close()
 
 	db.Exec(`
-		drop table if exists posts ;
-		drop table if exists users ;
+		drop table if exists fruits ;
 		drop table if exists database_changelog ;
 	`)
 
 	changesets := []Changeset{
 		LiteralChangeset("1", `
-			create table users (
+			create table fruits (
 				id   integer primary key auto_increment ,
 				name varchar ( 64 ) not null
 			) ;
@@ -38,12 +39,10 @@ func TestMysqlMigration(t *testing.T) {
 	assert.Equal(t, changesets, applied)
 
 	changesets = append(changesets, LiteralChangeset("2", `
-			create table posts (
-				id      integer primary key auto_increment ,
-				user_id integer not null ,
-				text    text    not null ,
-
-				foreign key ( user_id ) references users ( id )
+			insert into fruits (
+				name
+			) values (
+				'Orange'
 			) ;
 		`))
 
