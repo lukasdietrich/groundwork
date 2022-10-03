@@ -15,6 +15,10 @@ const (
 	// we store the time as text, because a varchar works in all major databases the same way.
 	timeFormat = time.RFC3339Nano
 	timeSize   = len(timeFormat)
+
+	columnName = "name"
+	columnHash = "hash"
+	columnTime = "time"
 )
 
 type changelogEntry struct {
@@ -24,10 +28,8 @@ type changelogEntry struct {
 }
 
 type changelogDao struct {
-	identTable string
-	identName  string
-	identHash  string
-	identTime  string
+	dialect   noorm.Dialect
+	tablename string
 }
 
 func newChangelogDao(ctx context.Context, tablename string) (*changelogDao, error) {
@@ -37,10 +39,8 @@ func newChangelogDao(ctx context.Context, tablename string) (*changelogDao, erro
 	}
 
 	dao := changelogDao{
-		identTable: dialect.QuoteIdentifier(tablename),
-		identName:  dialect.QuoteIdentifier("name"),
-		identHash:  dialect.QuoteIdentifier("hash"),
-		identTime:  dialect.QuoteIdentifier("time"),
+		dialect:   dialect,
+		tablename: tablename,
 	}
 
 	return &dao, nil
@@ -56,17 +56,17 @@ func (c *changelogDao) setupTable(ctx context.Context) error {
 			primary key ( %[2]s )
 		) ;
 	`,
-		c.identTable,
-		c.identName,
-		c.identHash,
-		c.identTime,
+		c.dialect.QuoteIdentifier(c.tablename),
+		c.dialect.QuoteIdentifier(columnName),
+		c.dialect.QuoteIdentifier(columnHash),
+		c.dialect.QuoteIdentifier(columnTime),
 
 		nameSize,
 		hashSize,
 		timeSize,
 	)
 
-	_, err := noorm.Exec(ctx, schema, noorm.None())
+	_, err := noorm.Exec(ctx, noorm.SQL{Query: schema})
 	return err
 }
 
@@ -75,24 +75,22 @@ func (c *changelogDao) lookup(ctx context.Context, name string) (*changelogEntry
 		select *
 		from %[1]s
 		where %[2]s = @0 ;
-	`, c.identTable, c.identName)
+	`,
+		c.dialect.QuoteIdentifier(c.tablename),
+		c.dialect.QuoteIdentifier(columnName),
+	)
 
-	return noorm.QueryFirst[changelogEntry](ctx, query, noorm.Positional(name))
+	return noorm.QueryFirst[changelogEntry](ctx, noorm.SQL{
+		Query: query,
+		Args:  noorm.Positional(name),
+	})
 }
 
 func (c *changelogDao) insert(ctx context.Context, entry *changelogEntry) error {
-	query := fmt.Sprintf(`
-		insert into %[1]s (
-			%[2]s ,
-			%[3]s ,
-			%[4]s
-		) values (
-			@name ,
-			@hash ,
-			@time
-		) ;
-	`, c.identTable, c.identName, c.identHash, c.identTime)
+	_, err := noorm.Exec(ctx, noorm.Insert[*changelogEntry]{
+		Tablename: c.tablename,
+		Model:     entry,
+	})
 
-	_, err := noorm.Exec(ctx, query, noorm.Named(entry))
 	return err
 }

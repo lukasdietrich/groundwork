@@ -113,7 +113,7 @@ func (m *migrator) apply(ctx context.Context, changeset Changeset) (bool, error)
 	}
 
 	if shouldApply {
-		if _, err := noorm.Exec(ctx, queries, noorm.None()); err != nil {
+		if _, err := noorm.Exec(ctx, noorm.SQL{Query: queries}); err != nil {
 			return false, err
 		}
 

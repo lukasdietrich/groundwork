@@ -14,9 +14,9 @@ jobs:
         image: 'postgres:14-alpine'
 
         env:
-          POSTGRES_DB: 'noorm'
-          POSTGRES_USER: 'noorm'
-          POSTGRES_PASSWORD: 'noorm'
+          POSTGRES_DB: 'groundwork'
+          POSTGRES_USER: 'groundwork'
+          POSTGRES_PASSWORD: 'groundwork'
 
         ports:
           - '5432:5432'
@@ -31,9 +31,9 @@ jobs:
         image: 'mariadb:10'
 
         env:
-          MARIADB_DATABASE: 'noorm'
-          MARIADB_USER: 'noorm'
-          MARIADB_PASSWORD: 'noorm'
+          MARIADB_DATABASE: 'groundwork'
+          MARIADB_USER: 'groundwork'
+          MARIADB_PASSWORD: 'groundwork'
           MARIADB_RANDOM_ROOT_PASSWORD: 'true'
 
         ports:

@@ -27,19 +27,19 @@ type ArgumentSource interface {
 	arg(name string) (any, error)
 }
 
+type QuerySource interface {
+	rebind(Dialect) (query string, params []any, err error)
+}
+
 // Exec executes a query without returning rows.
 // Exec expects a Querier to be present in the context (see WithDatabase).
-func Exec(ctx context.Context, query string, args ArgumentSource) (sql.Result, error) {
-	if err := checkValidArgs(args); err != nil {
-		return nil, err
-	}
-
+func Exec(ctx context.Context, query QuerySource) (sql.Result, error) {
 	querier, dialect, err := QuerierFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rebound, params, err := rebindQuery(query, dialect, args)
+	rebound, params, err := query.rebind(dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -49,17 +49,13 @@ func Exec(ctx context.Context, query string, args ArgumentSource) (sql.Result, e
 
 // Iterate executes a query and returns an iterator of the rows.
 // Iterate expects a Querier to be present in the context (see WithDatabase).
-func Iterate[T Struct](ctx context.Context, query string, args ArgumentSource) (Iterator[T], error) {
-	if err := checkValidArgs(args); err != nil {
-		return nil, err
-	}
-
+func Iterate[T Struct](ctx context.Context, query QuerySource) (Iterator[T], error) {
 	querier, dialect, err := QuerierFrom(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	rebound, params, err := rebindQuery(query, dialect, args)
+	rebound, params, err := query.rebind(dialect)
 	if err != nil {
 		return nil, err
 	}
@@ -80,8 +76,8 @@ func Iterate[T Struct](ctx context.Context, query string, args ArgumentSource) (
 
 // Query executes a query and returns a slice of T.
 // Query expects a Querier to be present in the context (see WithDatabase).
-func Query[T Struct](ctx context.Context, query string, args ArgumentSource) ([]T, error) {
-	iter, err := Iterate[T](ctx, query, args)
+func Query[T Struct](ctx context.Context, query QuerySource) ([]T, error) {
+	iter, err := Iterate[T](ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -110,8 +106,8 @@ func Query[T Struct](ctx context.Context, query string, args ArgumentSource) ([]
 // If the query yields no rows, sql.ErrNoRows is returned.
 // If the query yields more than one row, the remaining rows are discarded.
 // QueryFirst expects a Querier to be present in the context (see WithDatabase).
-func QueryFirst[T Struct](ctx context.Context, query string, args ArgumentSource) (*T, error) {
-	iter, err := Iterate[T](ctx, query, args)
+func QueryFirst[T Struct](ctx context.Context, query QuerySource) (*T, error) {
+	iter, err := Iterate[T](ctx, query)
 	if err != nil {
 		return nil, err
 	}

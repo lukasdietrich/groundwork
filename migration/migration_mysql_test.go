@@ -14,7 +14,7 @@ import (
 )
 
 func TestMysqlMigration(t *testing.T) {
-	db, err := noorm.Open("mysql", "noorm:noorm@/noorm?multiStatements=true")
+	db, err := groundwork.Open("mysql", "groundwork:groundwork@/groundwork?multiStatements=true")
 	require.NoError(t, err)
 
 	defer db.Close()

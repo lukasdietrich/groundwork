@@ -135,7 +135,7 @@ func TestRebind(t *testing.T) {
 			},
 		},
 	} {
-		query, args, err := rebindQuery(tc.input.query, defaultDialect{}, tc.input.args)
+		query, args, err := rebindQuery(defaultDialect{}, tc.input.query, tc.input.args)
 
 		require.NoError(t, err)
 		assert.Equal(t, tc.expected.query, query)

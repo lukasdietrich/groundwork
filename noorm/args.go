@@ -112,7 +112,7 @@ func (n nullableValue) Value() (driver.Value, error) {
 // placeholder. Named parameters have the form `@name` where `name` is the actual name.
 // A literal `@` can be written by doubling it `@@`. Only letters, numbers, dashes and underscores
 // are permitted as names.
-func rebindQuery(query string, dialect Dialect, args ArgumentSource) (string, []any, error) {
+func rebindQuery(dialect Dialect, query string, args ArgumentSource) (string, []any, error) {
 	const at = '@'
 
 	var (

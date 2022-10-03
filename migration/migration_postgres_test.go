@@ -14,7 +14,7 @@ import (
 )
 
 func TestPostgresMigration(t *testing.T) {
-	db, err := noorm.Open("postgres", "user=noorm dbname=noorm password=noorm sslmode=disable")
+	db, err := groundwork.Open("postgres", "user=groundwork dbname=groundwork password=groundwork sslmode=disable")
 	require.NoError(t, err)
 
 	defer db.Close()

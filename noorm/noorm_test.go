@@ -66,72 +66,71 @@ func (s *SqliteTestSuite) AfterTest() {
 }
 
 func (s *SqliteTestSuite) TestExec_Named() {
-	_, err := Exec(s.ctx,
-		`
-			insert into "users" ( "name" ) values ( @name ) ;
-		`,
-		Named(testStructUser{
-			Name: "Tom",
-		}))
+	_, err := Exec(s.ctx, SQL{
+		Query: `insert into "users" ( "name" ) values ( @name ) ;`,
+		Args:  Named(testStructUser{Name: "Tom"}),
+	})
+
 	s.Require().NoError(err)
 }
 
 func (s *SqliteTestSuite) TestExec_NamedPointer() {
-	_, err := Exec(s.ctx,
-		`
-			insert into "users" ( "name" ) values ( @name ) ;
-		`,
-		Named(&testStructUser{
-			Name: "Jerry",
-		}))
+	_, err := Exec(s.ctx, SQL{
+		Query: `insert into "users" ( "name" ) values ( @name ) ;`,
+		Args:  Named(&testStructUser{Name: "Jerry"}),
+	})
+
 	s.Require().NoError(err)
 }
 
 func (s *SqliteTestSuite) TestExec_Positional() {
-	_, err := Exec(s.ctx,
-		`
-			insert into "users" ( "name" ) values ( @0 ) ;
-		`,
-		Positional("Tom"))
+	_, err := Exec(s.ctx, SQL{
+		Query: `insert into "users" ( "name" ) values ( @0 ) ;`,
+		Args:  Positional("Tom"),
+	})
+
 	s.Require().NoError(err)
 }
 
 func (s *SqliteTestSuite) TestQuery() {
-	users, err := Query[testStructUser](s.ctx,
-		`
+	users, err := Query[testStructUser](s.ctx, SQL{
+		Query: `
 			select *
 			from "users"
 			where "name" in (@0) 
 			order by "id" asc ;
 		`,
-		Positional([]string{"Foo", "Baz"}))
+		Args: Positional([]string{"Foo", "Baz"}),
+	})
 
 	s.Require().NoError(err)
 	s.Equal([]testStructUser{{ID: 1, Name: "Foo"}, {ID: 3, Name: "Baz"}}, users)
 }
 
 func (s *SqliteTestSuite) TestQueryFirst() {
-	user, err := QueryFirst[testStructUser](s.ctx,
-		`
+	user, err := QueryFirst[testStructUser](s.ctx, SQL{
+		Query: `
 			select *
 			from "users"
 			where "name" = @name
 		`,
-		Named(testStructUser{Name: "Baz"}))
+		Args: Named(testStructUser{Name: "Baz"}),
+	})
 
 	s.Require().NoError(err)
 	s.Equal(&testStructUser{ID: 3, Name: "Baz"}, user)
 }
 
 func (s *SqliteTestSuite) TestIterate() {
-	iterator, err := Iterate[testStructUser](s.ctx,
-		`
+	iterator, err := Iterate[testStructUser](s.ctx, SQL{
+		Query: `
 			select *
 			from "users"
 			where "name" in (@0) 
 			order by "id" asc ;
 		`,
-		Positional([]string{"Foo", "Baz"}))
+		Args: Positional([]string{"Foo", "Baz"}),
+	})
 
 	s.Require().NoError(err)
 
