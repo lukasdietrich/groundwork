@@ -16,13 +16,23 @@ func typeOfGeneric[T any]() reflect.Type {
 	return reflect.TypeOf(t).Elem()
 }
 
+func indirectInterface(v reflect.Value) reflect.Value {
+	if v.Kind() == reflect.Interface && !v.IsNil() {
+		return v.Elem()
+	}
+
+	return v
+}
+
 type fieldLookupMap map[string][]int // name -> path of field indices
 
-func buildFieldLookupMap[T Struct]() (fieldLookupMap, error) {
-	t := typeOfGeneric[T]()
+func buildFieldLookupMapOfType(t reflect.Type) (fieldLookupMap, error) {
 	lookup := make(fieldLookupMap)
-
 	return lookup, analyzeStructFields(lookup, nil, t)
+}
+
+func buildFieldLookupMap[T Struct]() (fieldLookupMap, error) {
+	return buildFieldLookupMapOfType(typeOfGeneric[T]())
 }
 
 func analyzeStructFields(lookup fieldLookupMap, prefix []int, t reflect.Type) error {

@@ -17,7 +17,7 @@ func TestInsert(t *testing.T) {
 		Name: "Tester",
 	}
 
-	insert := Insert[TestStruct]{
+	insert := Insert{
 		Tablename: "table",
 		Model:     testStruct,
 	}

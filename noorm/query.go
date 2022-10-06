@@ -26,15 +26,15 @@ func (s SQL) rebind(dialect Dialect) (string, []any, error) {
 	return rebindQuery(dialect, s.Query, s.Args)
 }
 
-type Insert[T Struct] struct {
+type Insert struct {
 	requireExplicitFields
 
 	Tablename string
-	Model     T
+	Model     Struct
 	Returning bool
 }
 
-func (i Insert[T]) rebind(dialect Dialect) (string, []any, error) {
+func (i Insert) rebind(dialect Dialect) (string, []any, error) {
 	switch args := Named(i.Model).(type) {
 	case invalidArg:
 		return "", nil, args.error
@@ -52,7 +52,7 @@ func (i Insert[T]) rebind(dialect Dialect) (string, []any, error) {
 	return "", nil, ErrInvalidArg
 }
 
-func (i *Insert[T]) generateInsertQuery(dialect Dialect, args *namedArgs) (string, error) {
+func (i *Insert) generateInsertQuery(dialect Dialect, args *namedArgs) (string, error) {
 	var buffer bytes.Buffer
 
 	columns := make([]string, 0, len(args.lookupMap))

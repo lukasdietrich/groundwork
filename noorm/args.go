@@ -50,15 +50,18 @@ type namedArgs struct {
 
 // Named uses the fields of a struct as named arguments for a query.
 // Field names can be overwritten with struct tags.
-func Named[T Struct](args T) ArgumentSource {
-	lookupMap, err := buildFieldLookupMap[T]()
+func Named(args Struct) ArgumentSource {
+	v := indirectInterface(reflect.Indirect(reflect.ValueOf(&args)))
+	t := v.Type()
+
+	lookupMap, err := buildFieldLookupMapOfType(t)
 	if err != nil {
 		return invalidArg{err}
 	}
 
 	return &namedArgs{
 		lookupMap: lookupMap,
-		value:     reflect.Indirect(reflect.ValueOf(&args)),
+		value:     v,
 	}
 }
 

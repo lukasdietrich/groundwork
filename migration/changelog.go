@@ -87,7 +87,7 @@ func (c *changelogDao) lookup(ctx context.Context, name string) (*changelogEntry
 }
 
 func (c *changelogDao) insert(ctx context.Context, entry *changelogEntry) error {
-	_, err := noorm.Exec(ctx, noorm.Insert[*changelogEntry]{
+	_, err := noorm.Exec(ctx, noorm.Insert{
 		Tablename: c.tablename,
 		Model:     entry,
 	})
